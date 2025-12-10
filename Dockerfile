@@ -1,0 +1,28 @@
+FROM golang:1.24 AS builder
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o scheduler .
+
+FROM ubuntu:latest
+
+WORKDIR /app
+
+COPY --from=builder /build/scheduler .
+COPY --from=builder /build/web ./web
+
+ENV TODO_PORT=7540
+ENV TODO_DBFILE=/data/scheduler.db
+ENV TODO_PASSWORD=""
+
+EXPOSE 7540
+
+VOLUME ["/data"]
+
+CMD ["./scheduler"]
+

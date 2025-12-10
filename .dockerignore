@@ -1,0 +1,14 @@
+*.exe
+*.db
+*.db-shm
+*.db-wal
+scheduler
+test_server.exe
+final-project.exe
+.git
+.gitignore
+tests/
+README.md
+Dockerfile
+.dockerignore
+
