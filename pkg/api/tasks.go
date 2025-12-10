@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"final-project/pkg/db"
@@ -30,7 +31,8 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 
 	tasks, err := db.Tasks(limit, search)
 	if err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		log.Printf("failed to get tasks: %v", err)
+		writeJSON(w, http.StatusInternalServerError, taskResponse{Error: err.Error()})
 		return
 	}
 
@@ -45,5 +47,5 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, TasksResp{Tasks: taskResps})
+	writeJSON(w, http.StatusOK, TasksResp{Tasks: taskResps})
 }

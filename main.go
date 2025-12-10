@@ -21,6 +21,7 @@ func main() {
 	if err := db.Init(dbFile); err != nil {
 		log.Fatal(err)
 	}
+	defer db.DB.Close()
 
 	defaultPort := 7540
 	if envPort := os.Getenv("TODO_PORT"); envPort != "" {

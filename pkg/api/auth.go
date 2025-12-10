@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -120,27 +121,28 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req signinRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, signinResponse{Error: "Неверный формат запроса"})
+		writeJSON(w, http.StatusBadRequest, signinResponse{Error: "Неверный формат запроса"})
 		return
 	}
 
 	password := os.Getenv("TODO_PASSWORD")
 	if password == "" {
-		writeJSON(w, signinResponse{Error: "Аутентификация не настроена"})
+		writeJSON(w, http.StatusBadRequest, signinResponse{Error: "Аутентификация не настроена"})
 		return
 	}
 
 	if req.Password != password {
-		writeJSON(w, signinResponse{Error: "Неверный пароль"})
+		writeJSON(w, http.StatusUnauthorized, signinResponse{Error: "Неверный пароль"})
 		return
 	}
 
 	passwordHash := hashPassword(password)
 	token, err := generateToken(passwordHash)
 	if err != nil {
-		writeJSON(w, signinResponse{Error: "Ошибка создания токена"})
+		log.Printf("failed to generate token: %v", err)
+		writeJSON(w, http.StatusInternalServerError, signinResponse{Error: "Ошибка создания токена"})
 		return
 	}
 
-	writeJSON(w, signinResponse{Token: token})
+	writeJSON(w, http.StatusOK, signinResponse{Token: token})
 }

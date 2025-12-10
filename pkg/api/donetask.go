@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -15,35 +16,36 @@ func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		writeJSON(w, taskResponse{Error: "Не указан идентификатор"})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: "Не указан идентификатор"})
 		return
 	}
 
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: err.Error()})
 		return
 	}
 
 	if task.Repeat == "" {
 		if err := db.DeleteTask(id); err != nil {
-			writeJSON(w, taskResponse{Error: err.Error()})
+			log.Printf("failed to delete completed task: %v", err)
+			writeJSON(w, http.StatusInternalServerError, taskResponse{Error: err.Error()})
 			return
 		}
 	} else {
 		now := time.Now()
 		next, err := NextDate(now, task.Date, task.Repeat)
 		if err != nil {
-			writeJSON(w, taskResponse{Error: err.Error()})
+			writeJSON(w, http.StatusBadRequest, taskResponse{Error: err.Error()})
 			return
 		}
 
 		if err := db.UpdateDate(next, id); err != nil {
-			writeJSON(w, taskResponse{Error: err.Error()})
+			log.Printf("failed to update task date: %v", err)
+			writeJSON(w, http.StatusInternalServerError, taskResponse{Error: err.Error()})
 			return
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.Write([]byte("{}"))
+	writeJSON(w, http.StatusOK, struct{}{})
 }

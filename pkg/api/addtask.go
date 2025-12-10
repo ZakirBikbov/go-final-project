@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -21,9 +22,12 @@ type taskResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
-func writeJSON(w http.ResponseWriter, data interface{}) {
+func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	json.NewEncoder(w).Encode(data)
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("failed to encode JSON response: %v", err)
+	}
 }
 
 func checkDate(task *db.Task) error {
@@ -59,12 +63,12 @@ func checkDate(task *db.Task) error {
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var req taskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: err.Error()})
 		return
 	}
 
 	if req.Title == "" {
-		writeJSON(w, taskResponse{Error: "Не указан заголовок задачи"})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: "Не указан заголовок задачи"})
 		return
 	}
 
@@ -76,15 +80,16 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := checkDate(task); err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: err.Error()})
 		return
 	}
 
 	id, err := db.AddTask(task)
 	if err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		log.Printf("failed to add task: %v", err)
+		writeJSON(w, http.StatusInternalServerError, taskResponse{Error: err.Error()})
 		return
 	}
 
-	writeJSON(w, taskResponse{ID: fmt.Sprintf("%d", id)})
+	writeJSON(w, http.StatusOK, taskResponse{ID: fmt.Sprintf("%d", id)})
 }

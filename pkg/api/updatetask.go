@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -19,23 +20,23 @@ type updateTaskRequest struct {
 func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var req updateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: err.Error()})
 		return
 	}
 
 	if req.ID == "" {
-		writeJSON(w, taskResponse{Error: "Не указан идентификатор"})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: "Не указан идентификатор"})
 		return
 	}
 
 	id, err := strconv.ParseInt(req.ID, 10, 64)
 	if err != nil {
-		writeJSON(w, taskResponse{Error: "Неверный формат идентификатора"})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: "Неверный формат идентификатора"})
 		return
 	}
 
 	if req.Title == "" {
-		writeJSON(w, taskResponse{Error: "Не указан заголовок задачи"})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: "Не указан заголовок задачи"})
 		return
 	}
 
@@ -48,15 +49,15 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := checkDate(task); err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, taskResponse{Error: err.Error()})
 		return
 	}
 
 	if err := db.UpdateTask(task); err != nil {
-		writeJSON(w, taskResponse{Error: err.Error()})
+		log.Printf("failed to update task: %v", err)
+		writeJSON(w, http.StatusInternalServerError, taskResponse{Error: err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.Write([]byte("{}"))
+	writeJSON(w, http.StatusOK, struct{}{})
 }
